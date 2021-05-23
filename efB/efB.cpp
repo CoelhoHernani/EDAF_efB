@@ -18,14 +18,14 @@ using namespace std;
 //Excepção para lista vazia
 struct EMPTYLIST : public exception {
     const char* what() const throw() {
-        return "Lista vazia!";
+        return "Arvore vazia!";
     }
 };
 
 //Excepcão para posicões inválidas
 struct INVALIDPOSITIONS : public exception {
     virtual const char* what() const throw() {
-        return "Posicao invalida!";
+        return "Item inexistente!";
     }
 };
 
@@ -94,6 +94,7 @@ void BSTNODE::setNoDireito(BSTNODE* dir) {
 class BSTREE {
 private:
     BSTNODE *raiz, *atual;
+    int sinal;
     void inOrder(BSTNODE* no);
 
 public:
@@ -103,17 +104,29 @@ public:
     void insert(int el);
     void remove(int el);
     void printInOrder();
-    int findParent(int el);
+    void clear();
+    void clearTree(BSTNODE* no);
+    void rotateTree(int el);
+    void leftRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo);
+    void leftRightRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo);
+    void rightRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo);
+    void rightLeftRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo);
+    BSTNODE* findNode(int el);
+    BSTNODE* findParentNode(int el);
+    BSTNODE* findAntecessor(BSTNODE* no);
+    BSTNODE* findSucessor(BSTNODE* no);
 };
 
-//algoritmo left root right LVR
+//algoritmo getNoEsquerdo() root getNoDireito() LVR
 void BSTREE::inOrder(BSTNODE* no) {
     if (no != nullptr) {
         inOrder(no->getNoEsquerdo());
         if (no == raiz)
             cout << no->getElemento() << " ";
-        else
-            cout << no->getElemento() <<"(" << findParent(no->getElemento()) << ")" << " ";
+        else {
+            BSTNODE* temp = findParentNode(no->getElemento());
+            cout << no->getElemento() << "(" << temp->getElemento() << ")" << " ";
+        }
         inOrder(no->getNoDireito());
     }
 
@@ -121,12 +134,13 @@ void BSTREE::inOrder(BSTNODE* no) {
 
 
 BSTREE::BSTREE() {
+    sinal = 0;
     raiz = nullptr;
     atual = nullptr;
 }
 
 BSTREE::~BSTREE() {
-    //definir remoção da arvore
+    clear();
 }
 
 //verifica se a arvore está vazia
@@ -159,25 +173,238 @@ void BSTREE::insert(int el) {
 }
 
 void BSTREE::remove(int el) {
+    BSTNODE* noRemover = findNode(el), *temp, *pai = findParentNode(el), *noSucAnt, *anterior;
+    temp = noRemover;
+    if (noRemover != nullptr) {
+        //caso 1. nó é a raiz da arvore sem uma das subtree
+        if (noRemover == raiz && raiz->getNoEsquerdo() == nullptr)
+            raiz = noRemover->getNoDireito();
+        else if (noRemover == raiz && raiz->getNoDireito() == nullptr)
+            raiz = noRemover->getNoEsquerdo();
+        //caso 2. nó é uma folha
+        else if (noRemover->getNoDireito() == nullptr && noRemover->getNoEsquerdo() == nullptr) {
+            if (pai->getNoEsquerdo() == noRemover)
+                pai->setNoEsquerdo(nullptr);
+            else
+                pai->setNoDireito(nullptr);
+        }
+        //caso 3. nó tem 1 filho
+        else if (noRemover->getNoDireito() == nullptr) {
+            noRemover = noRemover->getNoEsquerdo();
+            pai->setNoEsquerdo(noRemover);
+        }
+        else if (noRemover->getNoEsquerdo() == nullptr) {
+            noRemover = noRemover->getNoDireito();
+            pai->setNoDireito(noRemover);
+        }
+        //caso 4. nó tem 2 filhos, alternar entre antecessor e sucessor
+        else if (noRemover->getNoDireito() != nullptr && noRemover->getNoEsquerdo() != nullptr) {
+            if (this->sinal == 0)
+                noSucAnt = findAntecessor(noRemover);
+            else
+                noSucAnt = findSucessor(noRemover);
+            BSTNODE* paiSucAnt = findParentNode(noSucAnt->getElemento());
+            //caso 4.1. nó é a raiz da arvore mas sucessor ou antecessor não é nenhum dos seus filhos
+            if (noRemover == raiz && noRemover->getNoDireito() != noSucAnt && noRemover->getNoEsquerdo() != noSucAnt) {
+                noSucAnt->setNoDireito(raiz->getNoDireito());
+                noSucAnt->setNoEsquerdo(raiz->getNoEsquerdo());
+                anterior = findParentNode(noSucAnt->getElemento());
+                if (anterior->getNoEsquerdo() == noSucAnt)
+                    anterior->setNoEsquerdo(nullptr);
+                else if (anterior->getNoDireito() == noSucAnt)
+                    anterior->setNoDireito(nullptr);
+                raiz = noSucAnt;
+            }
+            //caso 4.2.nó é a raiz da arvore mas sucessor ou antecessor é filho direito
+            else if (noRemover == raiz && noRemover->getNoDireito() == noSucAnt) {
+                noSucAnt->setNoEsquerdo(raiz->getNoEsquerdo());
+                raiz = noSucAnt;
+            }
+            //caso 4.3.nó é a raiz da arvore mas sucessor ou antecessor é filho esquerdo
+            else if (noRemover == raiz && noRemover->getNoEsquerdo() == noSucAnt) {
+                noSucAnt->setNoDireito(raiz->getNoDireito());
+                raiz = noSucAnt;
+            }
+            //caso 4.4. Casos em que o pai do antecessor ou sucessor não é o nó remover
+            else if (paiSucAnt != noRemover){
+                if (pai->getNoEsquerdo() == noRemover) {
+                    pai->setNoEsquerdo(noSucAnt);
+                    noSucAnt->setNoDireito(noRemover->getNoDireito());
+                    noSucAnt->setNoEsquerdo(noRemover->getNoEsquerdo());
+                    //aponta para null o ramo do qual descendia noSucAnt
+                    if (paiSucAnt->getNoEsquerdo() == noSucAnt)
+                        paiSucAnt->setNoEsquerdo(nullptr);
+                    else
+                        paiSucAnt->setNoDireito(nullptr);
+                }
+                else if (pai->getNoDireito() == noRemover) {
+                    pai->setNoDireito(noSucAnt);
+                    noSucAnt->setNoEsquerdo(noRemover->getNoEsquerdo());
+                    noSucAnt->setNoDireito(noRemover->getNoDireito());
+                    //aponta para null o ramo do qual descendia noSucAnt
+                    if (paiSucAnt->getNoDireito() == noSucAnt)
+                        paiSucAnt->setNoDireito(nullptr);
+                    else
+                        paiSucAnt->setNoEsquerdo(nullptr);
+                }
+            }
+            //caso 4.4.todos os casos fora das condições anteriores
+            else {
+                if (pai->getNoEsquerdo() == noRemover) {
+                    pai->setNoEsquerdo(noSucAnt);
+                    noSucAnt->setNoDireito(noRemover->getNoDireito());
+                }
+                else {
+                    pai->setNoDireito(noSucAnt);
+                    noSucAnt->setNoEsquerdo(noRemover->getNoEsquerdo());
+                }
+            }
+        }
+        delete(temp);
+    }
+    else
+        //lança a excepção com o valor do elemento inexistente
+        throw el;
+}
+
+void BSTREE::clearTree(BSTNODE* no) {
+    if (no == nullptr) {
+        return;
+    }
+    // elimina arvore utilizando a recursão em  postorder
+    clearTree(no->getNoEsquerdo());
+    clearTree(no->getNoDireito());
+    delete no;
+    no = nullptr;
+}
+
+void BSTREE::clear() {
+    clearTree(raiz);
+}
+
+void BSTREE::rotateTree(int el) {
+    BSTNODE* no = findNode(el), *pai = findParentNode(el), *avo;
+
+    if (no != nullptr) {
+        if (no == raiz)
+            return;
+        avo = findParentNode(pai->getElemento());
+        if (pai->getNoDireito() == no && (avo == nullptr || avo->getNoDireito() == pai))
+            leftRotation(pai, no, avo);
+        else if (pai->getNoEsquerdo() == no && (avo == nullptr || avo->getNoEsquerdo() == pai))
+            rightRotation(pai, no, avo);
+        else if (pai->getNoDireito() == no && avo->getNoEsquerdo() == pai)
+            leftRightRotation(pai, no, avo);
+        else if (pai->getNoEsquerdo() == no && avo->getNoDireito() == pai)
+            rightLeftRotation(pai, no, avo);
+    }
+    else
+        //lança a excepção com o valor do elemento inexistente
+        throw el;
 
 }
 
-//precorre a lista na ordem left root right
+//Rotação para esquerda na subarvore direita
+void BSTREE::leftRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo) {
+    //caso 1. avo não é null
+    if (avo != nullptr) {
+        avo->setNoDireito(no);
+        pai->setNoDireito(no->getNoEsquerdo());
+        no->setNoEsquerdo(pai);
+    }
+    //caso 2. avo é null
+    else {
+        pai->setNoDireito(no->getNoEsquerdo());
+        no->setNoEsquerdo(pai);
+        raiz = no;
+    }
+
+}
+
+//rotacao para esquerda quando no esta na subarvore esquerda direita
+void BSTREE::leftRightRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo) {
+    avo->setNoEsquerdo(no);
+    pai->setNoDireito(no->getNoEsquerdo());
+    no->setNoEsquerdo(pai);
+}
+
+//Rotação para direita na subarvore esquerda
+void BSTREE::rightRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo) {
+    //caso 1. avo não é null
+    if (avo != nullptr) {
+        avo->setNoEsquerdo(no);
+        pai->setNoEsquerdo(no->getNoDireito());
+        no->setNoDireito(pai);
+    }
+    //caso 2. avo é null
+    else {
+        pai->setNoEsquerdo(no->getNoDireito());
+        no->setNoDireito(pai);
+        raiz = no;
+    }
+}
+
+//rotacao para direita quando no esta na subarvore direita esquerda
+void BSTREE::rightLeftRotation(BSTNODE* pai, BSTNODE* no, BSTNODE* avo) {
+    avo->setNoDireito(no);
+    pai->setNoEsquerdo(no->getNoDireito());
+    no->setNoDireito(pai);
+}
+
+//precorre a lista na ordem getNoEsquerdo() root getNoDireito()
 void BSTREE::printInOrder() {
     inOrder(raiz); 
 }
 
-int BSTREE::findParent(int el) {
-    int pai=-1;
+//Encontra o no que tem o elemento do argumento
+BSTNODE* BSTREE::findNode(int el) {
     BSTNODE* no = raiz;
     while (no != nullptr && el != no->getElemento()) {
-        pai = no->getElemento();
+        if (el < no->getElemento())
+            no = no->getNoEsquerdo();
+        else
+            no = no->getNoDireito();
+    }
+    return no;
+}
+
+//Encontra o no que é pai do no que tem o elemento do argumento
+BSTNODE* BSTREE::findParentNode(int el) {
+    BSTNODE* no = raiz, *pai = nullptr;
+    while (no != nullptr && el != no->getElemento()) {
+        pai = no;
         if (el < no->getElemento())
             no = no->getNoEsquerdo();
         else
             no = no->getNoDireito();
     }
     return pai;
+}
+
+//Encontra no antecessor do no passado como argumento
+//antecessor arvore esquerda elemento mais direita
+BSTNODE* BSTREE::findAntecessor(BSTNODE* no) {
+    BSTNODE* antecessor = no;
+    this->sinal = 1;
+    if (no->getNoEsquerdo() != nullptr) {
+        antecessor = no->getNoEsquerdo();
+        while (antecessor->getNoDireito() != nullptr)
+            antecessor = antecessor->getNoDireito();
+    }
+    return antecessor;
+}
+
+//Encontra no sucessor do no passado como argumento
+//Sucessor arvore direita elemento mais esquerda
+BSTNODE* BSTREE::findSucessor(BSTNODE* no) {
+    BSTNODE* sucessor = no;
+    this->sinal = 0;
+    if (no->getNoDireito() != nullptr) {
+        sucessor = no->getNoDireito();
+        while (sucessor->getNoEsquerdo() != nullptr)
+            sucessor = sucessor->getNoEsquerdo();
+    }
+    return sucessor;
 }
 
 //Classe dos comandos que estão no ficheiro
@@ -219,22 +446,60 @@ void PAINEL::print_inorder() {
             throw EMPTYLIST();
         cout << "Arvore= ";
         bst->printInOrder();
+        cout << endl;
     }
-    catch (EMPTYLIST& e) { //Se a lista estiver vazia então trata a excepção
+    catch (EMPTYLIST& e) { //Se a arvore estiver vazia então trata a excepção
         cout << "Comando " << comando << ": " << e.what() << endl;
     }
 }
 
 void PAINEL::delete_() {
-
+    try {
+        if (bst->isEmpty() == true)
+            throw EMPTYLIST();
+        int aux;
+        if (args != " ") {
+            istringstream arg(args);
+            while (arg >> aux)
+                bst->remove(aux);
+        }
+    }
+    catch (EMPTYLIST& e) { //Se a arvore estiver vazia então trata a excepção
+        cout << "Comando " << comando << ": " << e.what() << endl;
+    }
+    catch (int i) {     //Se item não existir então trata a excepção
+        cout << "Comando " <<comando << ": Item " << i <<" inexistente!" << endl;
+    }
 }
 
 void PAINEL::clear() {
-
+    try {
+        if (bst->isEmpty() == true)
+            throw EMPTYLIST();
+        bst->clear();
+    }
+    catch (EMPTYLIST& e) { //Se a arvore estiver vazia então trata a excepção
+        cout << "Comando " << comando << ": " << e.what() << endl;
+    }
 }
 
 void PAINEL::rotate() {
-
+    try {
+        if (bst->isEmpty() == true)
+            throw EMPTYLIST();
+        int aux;
+        if (args != " ") {
+            istringstream arg(args);
+            while (arg >> aux)
+                bst->rotateTree(aux);
+        }
+    }
+    catch (EMPTYLIST& e) { //Se a arvore estiver vazia então trata a excepção
+        cout << "Comando " << comando << ": " << e.what() << endl;
+    }
+    catch (int i) {     //Se item não existir então trata a excepção
+        cout << "Comando " << comando << ": Item " << i << " inexistente!" << endl;
+    }
 }
 
 //Construtor do menu
@@ -266,7 +531,7 @@ void PAINEL::executaComando() {
         insert();
     else if (comando == "print_inorder")
         print_inorder();
-    else if (comando == "delete_")
+    else if (comando == "delete")
         delete_();
     else if (comando == "clear")
         clear();

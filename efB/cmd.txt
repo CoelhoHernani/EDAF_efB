@@ -1,5 +1,13 @@
-# teste 00
-# print
-
-insert  4 2 6  1 3 5 7
+#test case 8 input
+#Your Output (stdout)
+insert 7  11  14  3  6  2  8  4  1  9 
 print_inorder
+delete 11 
+print_inorder
+rotate 3 
+print_inorder
+delete 7 
+print_inorder
+rotate 8 
+print_inorder
+
