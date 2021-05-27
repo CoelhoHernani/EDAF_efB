@@ -1,13 +1,16 @@
 #test case 8 input
 #Your Output (stdout)
-insert 7  11  14  3  6  2  8  4  1  9 
+insert 8 5 7 13 2 10 18 15 9 6 12
 print_inorder
-delete 11 
+delete 7 13
 print_inorder
-rotate 3 
+rotate 18
 print_inorder
-delete 7 
+delete 12 18
 print_inorder
-rotate 8 
+rotate 5 15
 print_inorder
-
+delete 9
+print_inorder
+delete 5
+print_inorder
