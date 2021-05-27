@@ -173,94 +173,29 @@ void BSTREE::insert(int el) {
 }
 
 void BSTREE::remove(int el) {
-    BSTNODE* noRemover = findNode(el), *temp, *pai = findParentNode(el), *noSucAnt, *anterior;
-    temp = noRemover;
-    if (noRemover != nullptr) {
-        //caso 1. nó é a raiz da arvore sem uma das subtree
-        if (noRemover == raiz && raiz->getNoEsquerdo() == nullptr)
-            raiz = noRemover->getNoDireito();
-        else if (noRemover == raiz && raiz->getNoDireito() == nullptr)
-            raiz = noRemover->getNoEsquerdo();
-        //caso 2. nó é uma folha
-        else if (noRemover->getNoDireito() == nullptr && noRemover->getNoEsquerdo() == nullptr) {
-            if (pai->getNoEsquerdo() == noRemover)
+    BSTNODE* no = findNode(el), * pai = findParentNode(el), * noSucAnt, * paiAntSuc;
+    if (no != nullptr) {
+        if (this->sinal == 0)
+            noSucAnt = findAntecessor(no);
+        else
+            noSucAnt = findSucessor(no);
+        if (no->getNoDireito() == nullptr && no->getNoEsquerdo() == nullptr) {
+            if (pai->getNoEsquerdo() == no)
                 pai->setNoEsquerdo(nullptr);
             else
                 pai->setNoDireito(nullptr);
         }
-        //caso 3. nó tem 1 filho
-        else if (noRemover->getNoDireito() == nullptr) {
-            noRemover = noRemover->getNoEsquerdo();
-            pai->setNoEsquerdo(noRemover);
-        }
-        else if (noRemover->getNoEsquerdo() == nullptr) {
-            noRemover = noRemover->getNoDireito();
-            pai->setNoDireito(noRemover);
-        }
-        //caso 4. nó tem 2 filhos, alternar entre antecessor e sucessor
-        else if (noRemover->getNoDireito() != nullptr && noRemover->getNoEsquerdo() != nullptr) {
-            if (this->sinal == 0)
-                noSucAnt = findAntecessor(noRemover);
-            else
-                noSucAnt = findSucessor(noRemover);
-            BSTNODE* paiSucAnt = findParentNode(noSucAnt->getElemento());
-            //caso 4.1. nó é a raiz da arvore mas sucessor ou antecessor não é nenhum dos seus filhos
-            if (noRemover == raiz && noRemover->getNoDireito() != noSucAnt && noRemover->getNoEsquerdo() != noSucAnt) {
-                noSucAnt->setNoDireito(raiz->getNoDireito());
-                noSucAnt->setNoEsquerdo(raiz->getNoEsquerdo());
-                anterior = findParentNode(noSucAnt->getElemento());
-                if (anterior->getNoEsquerdo() == noSucAnt)
-                    anterior->setNoEsquerdo(nullptr);
-                else if (anterior->getNoDireito() == noSucAnt)
-                    anterior->setNoDireito(nullptr);
-                raiz = noSucAnt;
-            }
-            //caso 4.2.nó é a raiz da arvore mas sucessor ou antecessor é filho direito
-            else if (noRemover == raiz && noRemover->getNoDireito() == noSucAnt) {
-                noSucAnt->setNoEsquerdo(raiz->getNoEsquerdo());
-                raiz = noSucAnt;
-            }
-            //caso 4.3.nó é a raiz da arvore mas sucessor ou antecessor é filho esquerdo
-            else if (noRemover == raiz && noRemover->getNoEsquerdo() == noSucAnt) {
-                noSucAnt->setNoDireito(raiz->getNoDireito());
-                raiz = noSucAnt;
-            }
-            //caso 4.4. Casos em que o pai do antecessor ou sucessor não é o nó remover
-            else if (paiSucAnt != noRemover){
-                if (pai->getNoEsquerdo() == noRemover) {
-                    pai->setNoEsquerdo(noSucAnt);
-                    noSucAnt->setNoDireito(noRemover->getNoDireito());
-                    noSucAnt->setNoEsquerdo(noRemover->getNoEsquerdo());
-                    //aponta para null o ramo do qual descendia noSucAnt
-                    if (paiSucAnt->getNoEsquerdo() == noSucAnt)
-                        paiSucAnt->setNoEsquerdo(nullptr);
-                    else
-                        paiSucAnt->setNoDireito(nullptr);
-                }
-                else if (pai->getNoDireito() == noRemover) {
-                    pai->setNoDireito(noSucAnt);
-                    noSucAnt->setNoEsquerdo(noRemover->getNoEsquerdo());
-                    noSucAnt->setNoDireito(noRemover->getNoDireito());
-                    //aponta para null o ramo do qual descendia noSucAnt
-                    if (paiSucAnt->getNoDireito() == noSucAnt)
-                        paiSucAnt->setNoDireito(nullptr);
-                    else
-                        paiSucAnt->setNoEsquerdo(nullptr);
-                }
-            }
-            //caso 4.4.todos os casos fora das condições anteriores
-            else {
-                if (pai->getNoEsquerdo() == noRemover) {
-                    pai->setNoEsquerdo(noSucAnt);
-                    noSucAnt->setNoDireito(noRemover->getNoDireito());
-                }
-                else {
-                    pai->setNoDireito(noSucAnt);
-                    noSucAnt->setNoEsquerdo(noRemover->getNoEsquerdo());
-                }
-            }
-        }
-        delete(temp);
+        paiAntSuc = findParentNode(noSucAnt->getElemento());
+        if (paiAntSuc->getNoDireito() == noSucAnt && noSucAnt != no)
+            paiAntSuc->setNoDireito(noSucAnt->getNoDireito());
+        else if (paiAntSuc->getNoEsquerdo() == noSucAnt && noSucAnt != no)
+            paiAntSuc->setNoEsquerdo(noSucAnt->getNoEsquerdo());
+        else if (noSucAnt == no && no->getNoDireito() == nullptr)
+            pai->setNoDireito(no->getNoEsquerdo());
+        else if (noSucAnt == no && no->getNoEsquerdo() == nullptr)
+            pai->setNoEsquerdo(no->getNoDireito());
+        no->setElemento(noSucAnt->getElemento()); // copiar para o no o valor do elemento sucessor ou antecessor
+        delete(noSucAnt);
     }
     else
         //lança a excepção com o valor do elemento inexistente
