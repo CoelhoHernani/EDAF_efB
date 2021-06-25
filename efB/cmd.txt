@@ -2,8 +2,8 @@
 #Your Output (stdout)
 insert 8 5 7 13 2 10 18 15 9 6 12
 print_inorder
-delete 7 13
-print_inorder
+#delete 7 13
+#print_inorder
 rotate 18
 print_inorder
 delete 12 18
